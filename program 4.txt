@@ -1,0 +1,70 @@
+
+import numpy as np
+import pandas as pd
+from sklearn.datasets import load_iris
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+import matplotlib.pyplot as plt
+
+iris = load_iris()
+
+X = pd.DataFrame(iris.data, columns=iris.feature_names)
+true_labels = iris.target
+
+Xs = StandardScaler().fit_transform(X)
+
+k = 3
+
+km = KMeans(n_clusters=k, n_init=10, random_state=42)
+
+clusters = km.fit_predict(Xs)
+
+cluster_counts = pd.Series(clusters, name="cluster").value_counts().sort_index()
+
+centers = pd.DataFrame(
+    km.cluster_centers_,
+    columns=iris.feature_names
+)
+
+sil = silhouette_score(Xs, clusters)
+
+print("=== K-means summary ===")
+print("k =", k)
+
+print("\nCluster sizes:")
+print(cluster_counts.to_string())
+
+print("\nSilhouette score:", round(sil, 3))
+
+print("\nCluster centers (in standardized space):")
+print(centers.round(3).to_string(index=True))
+
+mapping = {}
+
+for c in range(k):
+    idx = np.where(clusters == c)[0]
+    maj = pd.Series(true_labels[idx]).mode()[0]
+    mapping[c] = iris.target_names[maj]
+
+print("\nCluster to species mapping:")
+print(mapping)
+
+cross = pd.crosstab(
+    pd.Series(clusters, name="cluster"),
+    pd.Series(
+        [iris.target_names[t] for t in true_labels],
+        name="true_species"
+    )
+)
+
+print("\nCross-tab:")
+print(cross.to_string())
+
+plt.figure()
+plt.scatter(Xs[:, 0], Xs[:, 1], c=clusters)
+plt.xlabel(iris.feature_names[0])
+plt.ylabel(iris.feature_names[1])
+plt.title("K-means clusters on Iris (standardized)")
+plt.tight_layout()
+plt.show()

@@ -1,0 +1,50 @@
+
+import pandas as pd
+import numpy as np
+
+data = {
+    "Cloudy": list("YNNYNYNYNNYNNY"),
+    "Sprinkler": list("NYYNNYNNYYNNNY"),
+    "Rain": list("YYNNYNNYNYNYNN"),
+    "WetGrass": list("YYYYNYNYYYNNYN")
+}
+
+df = pd.DataFrame(data)
+
+def cpt(df, var, parents):
+    if not parents:
+        return df[var].value_counts(normalize=True).sort_index()
+
+    ct = pd.crosstab(
+        index=[df[p] for p in parents],
+        columns=df[var],
+        normalize="index",
+        dropna=False
+    )
+
+    for v in ["N", "Y"]:
+        if v not in ct.columns:
+            ct[v] = 0.0
+
+    ct = ct[["N", "Y"]]
+    return ct
+
+cpt_C = cpt(df, "Cloudy", [])
+cpt_S_given_C = cpt(df, "Sprinkler", ["Cloudy"])
+cpt_R_given_C = cpt(df, "Rain", ["Cloudy"])
+cpt_W_given_SR = cpt(df, "WetGrass", ["Sprinkler", "Rain"])
+
+print("P(Cloudy):\n", cpt_C, "\n")
+print("P(Sprinkler | Cloudy):\n", cpt_S_given_C, "\n")
+print("P(Rain | Cloudy):\n", cpt_R_given_C, "\n")
+print("P(WetGrass | Sprinkler, Rain):\n", cpt_W_given_SR, "\n")
+
+P_WetGrass_Y = (df["WetGrass"] == "Y").mean()
+
+P_Rain_Y_given_WetGrass_Y = (
+    df[(df["WetGrass"] == "Y") & (df["Rain"] == "Y")].shape[0]
+    / df[(df["WetGrass"] == "Y")].shape[0]
+)
+
+print(f"P(WetGrass=Y) ≈ {P_WetGrass_Y:.3f}")
+print(f"P(Rain=Y | WetGrass=Y) ≈ {P_Rain_Y_given_WetGrass_Y:.3f}")

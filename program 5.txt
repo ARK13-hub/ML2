@@ -1,0 +1,51 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+data = np.array([
+    [1.0, 1.0], [1.2, 0.8], [0.8, 1.2],
+    [4.0, 4.0], [4.2, 3.8], [3.8, 4.2],
+    [7.0, 1.0], [7.2, 1.2], [6.8, 0.8]
+])
+
+rows, cols = 3, 3
+learning_rate = 0.5
+iterations = 200
+
+np.random.seed(42)
+weights = np.random.rand(rows, cols, 2)
+
+for itr in range(iterations):
+    for x in data:
+        dist = np.linalg.norm(weights - x, axis=2)
+        bmu = np.unravel_index(np.argmin(dist), dist.shape)
+        weights[bmu] += learning_rate * (x - weights[bmu])
+
+print("Training complete!")
+
+print("\nData mapping to SOM grid:")
+
+for point in data:
+    dist = np.linalg.norm(weights - point, axis=2)
+    bmu = np.unravel_index(np.argmin(dist), dist.shape)
+    print(f"Data {point} --> Neuron {bmu}")
+
+plt.figure()
+
+plt.scatter(
+    data[:, 0], data[:, 1],
+    color="red",
+    label="Input Data"
+)
+
+for i in range(rows):
+    for j in range(cols):
+        plt.scatter(
+            weights[i, j, 0],
+            weights[i, j, 1],
+            color="blue"
+        )
+
+plt.title("Simple SOM Result")
+plt.legend()
+plt.show()

@@ -1,0 +1,69 @@
+
+import pandas as pd
+import itertools
+
+data = {
+    "Cloudy": list("YNNYNYNYNNYNNY"),
+    "Sprinkler": list("NYYNNYNNYYNNNY"),
+    "Rain": list("YYNNYNNYNYNYNN"),
+    "WetGrass": list("YYYYNYNYYYNNYN")
+}
+
+df = pd.DataFrame(data)
+
+def cond_prob(df, A, a, given=None):
+    if given is None:
+        return (df[A] == a).mean()
+
+    mask = pd.Series([True] * len(df))
+
+    for G, g in given.items():
+        mask &= (df[G] == g)
+
+    return ((df[A] == a) & mask).sum() / mask.sum()
+
+q1 = cond_prob(df, "Sprinkler", "Y", {"Cloudy": "Y"})
+q2 = cond_prob(df, "Rain", "Y", {"Cloudy": "N"})
+q3 = cond_prob(df, "Cloudy", "Y", {"WetGrass": "Y"})
+q4 = cond_prob(df, "Rain", "Y", {"WetGrass": "Y"})
+
+print(f"P(S=Y | C=Y) ≈ {q1:.3f}")
+print(f"P(R=Y | C=N) ≈ {q2:.3f}")
+print(f"P(C=Y | W=Y) ≈ {q3:.3f}")
+print(f"P(R=Y | W=Y) ≈ {q4:.3f}")
+
+def joint_prob(C, S, R, W):
+    def p_cloudy(c):
+        return (df["Cloudy"] == c).mean()
+
+    def p_s_given_c(s, c):
+        mask = df["Cloudy"] == c
+        return ((df["Sprinkler"] == s) & mask).sum() / mask.sum()
+
+    def p_r_given_c(r, c):
+        mask = df["Cloudy"] == c
+        return ((df["Rain"] == r) & mask).sum() / mask.sum()
+
+    def p_w_given_sr(w, s, r):
+        mask = (df["Sprinkler"] == s) & (df["Rain"] == r)
+        return ((df["WetGrass"] == w) & mask).sum() / mask.sum()
+
+    return (
+        p_cloudy(C)
+        * p_s_given_c(S, C)
+        * p_r_given_c(R, C)
+        * p_w_given_sr(W, S, R)
+    )
+
+best = None
+bestp = -1
+
+for C, S, R in itertools.product(["Y", "N"], repeat=3):
+    p = joint_prob(C, S, R, "Y")
+
+    if p > bestp:
+        bestp = p
+        best = (C, S, R)
+
+print("MPE for (C,S,R) given W=Y:", best)
+print("Unnormalized score ≈", round(bestp, 5))
